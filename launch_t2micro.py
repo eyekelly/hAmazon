@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+import pdb
 import boto3
 ec2 = boto3.resource('ec2')
 instance = ec2.create_instances(ImageId='ami-6b7c6e0f',
@@ -8,7 +9,4 @@ instance = ec2.create_instances(ImageId='ami-6b7c6e0f',
     InstanceType='t2.micro',
     SubnetId='subnet-f3d45bbe',
     SecurityGroupIds=['sg-1113f179'])
-print(instance)
-
-#create log of useful data
-#
+print "created instance with id" + " " + instance[0].id
