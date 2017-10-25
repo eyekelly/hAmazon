@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import pdb
+import json
 import boto3
 ec2 = boto3.resource('ec2')
 instance = ec2.create_instances(ImageId='ami-6b7c6e0f',
@@ -9,4 +9,12 @@ instance = ec2.create_instances(ImageId='ami-6b7c6e0f',
     InstanceType='t2.micro',
     SubnetId='subnet-f3d45bbe',
     SecurityGroupIds=['sg-1113f179'])
-print "created instance with id" + " " + instance[0].id
+instance_id = instance[0].id
+print "created instance with id" + " " + instance_id
+
+client = boto3.client('ec2')
+waiter = client.get_waiter('instance_running')
+waiter.wait(InstanceIds=[instance_id])
+
+response = client.describe_instances(InstanceIds=[instance_id])
+print(response['PrivateDnsName'])
