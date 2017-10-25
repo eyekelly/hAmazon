@@ -16,5 +16,5 @@ client = boto3.client('ec2')
 waiter = client.get_waiter('instance_running')
 waiter.wait(InstanceIds=[instance_id])
 
-response = client.describe_instances(InstanceIds=[instance_id])
-print(response['PrivateDnsName'])
+instance_details = ec2.Instance(id=instance_id)
+print instance_details.private_dns_name
