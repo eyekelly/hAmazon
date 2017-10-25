@@ -13,7 +13,8 @@ instance_id = instance[0].id
 print "created instance with id" + " " + instance_id
 
 client = boto3.client('ec2')
-response = client.get_console_output(InstanceId=instance_id)
+waiter = client.get_waiter('instance_running')
+waiter.wait(InstanceIds=[instance_id])
 
-with open('log.json', 'w') as outfile:
-    json.dump(str(response), outfile)
+response = client.describe_instances(InstanceIds=[instance_id])
+print(response['PrivateDnsName'])
