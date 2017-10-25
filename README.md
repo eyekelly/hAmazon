@@ -3,6 +3,8 @@
 
 This is a repo I've created to learn to use AWS with python, it's likely of no use to anyone but me, but feel free to use if it helps you.
 
+really useful resource https://gist.github.com/iMilnb/0ff71b44026cfd7894f8
+
 There's some prerequisites which are roughly as follows.
 
 - You have installed aws cli and run aws configure (and its worked)
