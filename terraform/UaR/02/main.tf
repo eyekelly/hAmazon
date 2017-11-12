@@ -7,43 +7,91 @@ variable "server_port" {
   default = 8080
 }
 
-output "public IP" {
-  value = "${aws_instance.UaR_02_1.public_ip}"
-}
-
-resource "aws_security_group" "ssh_access_TCH" {
-  name = "ssh"
-  ingress {
-    from_port = 22
-    to_port   = 22
-    protocol  = "tcp"
-    cidr_blocks = ["194.74.174.162/32"]
-  }
-}
-
-resource "aws_security_group" "SG_UaR_02_1" {
-  name = "SG_UaR_02_1"
-  ingress {
-    from_port = "${var.server_port}"
-    to_port   = "${var.server_port}"
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_instance" "UaR_02_1" {
-  ami = "ami-40d28157"
-  instance_type = "t2.micro"
-
-  vpc_security_group_ids = ["${aws_security_group.SG_UaR_02_1.id}","${aws_security_group.ssh_access_TCH.id}"]
+resource "aws_launch_configuration" "UaR_02_1_LC" {
+  image_id        = "ami-40d28157"
+  instance_type   = "t2.micro"
+  security_groups = ["${aws_security_group.instances.id}"]
 
   user_data = <<-EOF
-  #!/bin/bash
-  echo "hello World" > index.html
-  nohup busybox httpd -f -p "${var.server_port}" &
-  EOF
+              #!/bin/bash
+              echo "hello World" > index.html
+              nohup busybox httpd -f -p "${var.server_port}" &
+              EOF
 
-  tags {
-    Name = "UaR_02_1"
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_group" "UaR_02_1_ASG" {
+ launch_configuration   = "${aws_launch_configuration.UaR_02_1_LC.id}"
+ availability_zones     = ["${data.aws_availability_zones.all.names}"]
+
+load_balancers = ["${aws_elb.UaR_02_1_ELB.name}"]
+health_check_type = "ELB"
+
+ min_size = 2
+ max_size = 10
+
+ tag {
+   key                  = "Name"
+   value                = "terraform_asg_example"
+   propagate_at_launch  = true
+ }
+}
+
+resource "aws_security_group" "instances" {
+  name = "terraform-example-instance"
+
+  ingress {
+    from_port     = "${var.server_port}"
+    to_port       = "${var.server_port}"
+    protocol      = "tcp"
+    cidr_blocks   = ["0.0.0.0/0"]
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+data "aws_availability_zones" "all" {}
+
+resource "aws_elb" "UaR_02_1_ELB" {
+  name                = "terraform-asg-example"
+  availability_zones  = ["${data.aws_availability_zones.all.names}"]
+  security_groups     = ["${aws_security_group.elb.id}"]
+
+  listener {
+    lb_port           = 80
+    lb_protocol       = "http"
+    instance_port     = "${var.server_port}"
+    instance_protocol = "http"
+  }
+
+  health_check {
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 3
+    interval            = 30
+    target              = "HTTP:${var.server_port}/"
+  }
+}
+
+resource "aws_security_group" "elb" {
+  name = "terraform_example_elb"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
